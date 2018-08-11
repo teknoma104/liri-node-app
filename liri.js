@@ -100,14 +100,23 @@ function spotifyThisSong(inputString) {
             });
         });
 
-        // Console log below only shows if user actually types in a song to search for
-        if (limit === 5) {
+        // Console log below only shows if user actually types in a song to search for and it yielded data
+        if (limit === 5 && data.tracks.total != 0) {
             console.log("\nShowing top 5 search results for '" + song + "'\n");
         }
 
-        // For loop to show all results data
-        for (var x = 0; x < results.length; x++) {
-            console.log("Artist: " + results[x].artist + "\nSong:  " + results[x].song + "\nSpotify Preview Link: " + results[x].preview + "\nAlbum: " + results[x].album + "\n");;
+        // If the API call returns total = 0 then display error message below
+        if (data.tracks.total === 0)
+        {
+            console.log("Sorry couldn't find any data from Spotify for " + song + ". Please check if the song name is spelled correctly.");
+        }
+
+        // Only runs while total is not 0, meaning there is data received from the API call
+        if (data.tracks.total != 0) {
+            // For loop to show all results data
+            for (var x = 0; x < results.length; x++) {
+                console.log("Artist: " + results[x].artist + "\nSong:  " + results[x].song + "\nSpotify Preview Link: " + results[x].preview + "\nAlbum: " + results[x].album + "\n");;
+            }
         }
     });
 
@@ -350,7 +359,7 @@ function doWhatItSays() {
                 break;
             case "weather-this":
                 console.log("weather-this detected in file\n");
-                weatherThis(query);
+                weatherThis();
                 break;
         }
 
