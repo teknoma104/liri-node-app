@@ -1,7 +1,7 @@
 console.log("key are loaded!!\n");
 
 exports.openweathermap = {
-  key: process.env.OPENWEATHERMAP_KEY
+  APPID: process.env.OPENWEATHERMAP_KEY
 };
 
 exports.spotify = {

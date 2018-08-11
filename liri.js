@@ -1,18 +1,18 @@
 // Loads .dotenv containing locally stored API keys
 require("dotenv").config();
 
-// Load the NPM Packages: request and fs
+// Load the NPM Packages: request, fs, inquirer
 var request = require("request");
 var fs = require("fs");
+var inquirer = require("inquirer");
 
 // Import our keys
 var keys = require("./keys.js");
 
 var Spotify = require("node-spotify-api");
 
+// constructor based on Spotify variable that requires the node-spotify-api from NPM
 var spotify = new Spotify(keys.spotify);
-// var weather = new request(keys.openweathermap);
-
 
 // Takes in all of the command line arguments
 var inputString = process.argv;
@@ -25,10 +25,6 @@ for (var x = 3; x < inputString.length; x++) {
     query.push(inputString[x]);
 }
 
-console.log("calling query variable");
-console.log(query);
-console.log("");
-
 switch (command) {
     case "spotify-this-song":
         spotifyThisSong(query);
@@ -40,7 +36,7 @@ switch (command) {
         doWhatItSays();
         break;
     case "weather-this":
-        weatherThis(query);
+        weatherThis();
         break;
 }
 
@@ -159,32 +155,10 @@ function movieThis(inputString) {
 
     request(queryUrl, function (error, response, body) {
 
-        // console.log("error");
-        // console.log(error);
-        // console.log("");
-
-        // console.log("testing true/false on error");
-        // console.log(!error);
-        // console.log("");
-
-        // console.log("response");
-        // console.log(response);
-        // console.log("");
-        // console.log(response.statusCode);
-
-        // console.log("body");
-        // console.log(body);
-        // console.log("");
-        // console.log(JSON.parse(body).Response)
         bodyResponse = JSON.parse(body).Response;
-        // console.log("bodyResponse:  " + bodyResponse);
-        // console.log(JSON.parse(body).Error)
 
         // If the request is successful
         if (bodyResponse === "True" && response.statusCode === 200) {
-
-            // console.log(JSON.parse(body));
-            // console.log("");
 
             var ratingsArray = JSON.parse(body).Ratings;
 
@@ -198,8 +172,7 @@ function movieThis(inputString) {
 
             // Condition check to see if IMDB score is available in body.Ratings
             // value of -1 means not found
-            if (findIMDB != -1)
-            {
+            if (findIMDB != -1) {
                 console.log("IMDB Rating: " + JSON.parse(body).Ratings[0].Value);
 
             }
@@ -209,8 +182,7 @@ function movieThis(inputString) {
 
             // Condition check to see if Rotten Tomatoes score is available in body.Ratings
             // value of -1 means not found
-            if (findRT != -1)
-            {
+            if (findRT != -1) {
                 console.log("Rotten Tomatoes Rating: " + JSON.parse(body).Ratings[1].Value);
 
             }
@@ -229,6 +201,126 @@ function movieThis(inputString) {
     });
 }
 
+function weatherThis() {
+    console.log("=============================");
+    console.log("Calling Weather-This Function");
+    console.log("=============================\n");
+
+    inquirer.prompt([
+        {
+            type: "list",
+            name: "searchType",
+            message: "Search weather by city or zip code?",
+            choices: ["City", "Zip Code"]
+        }
+    ]).then(function (response) {
+
+        if (response.searchType === "City") {
+
+            inquirer.prompt([
+                {
+                    type: "input",
+                    name: "userCity",
+                    message: "Enter the city name:  "
+                }]).then(function (cityresponse) {
+                    var userCityName = cityresponse.userCity;
+
+                    // Replaces spaces in city name with + for the query URL
+                    var queryCityName = userCityName.split(' ').join('+');
+
+                    // Then run a request to the OpenWeatherMap API with the location specified
+                    var queryUrl = "https://api.openweathermap.org/data/2.5/weather?q=" + queryCityName + "&units=imperial" + "&APPID=" + keys.openweathermap.APPID;
+                    
+                    request(queryUrl, function (error, response, body) {
+                        
+                        // JSON'ing the body response and storing into weather, making it in a more readable format to easily discern name of attributes
+                        var weather = JSON.parse(body);
+
+                        // If there were no errors and the response code was 200 (i.e. the request was successful)...
+                        if (!error && response.statusCode === 200) {
+                            console.log("\nWeather currently in " + userCityName + ":");
+                            console.log("It's " + weather.main.temp + " degrees Fahrenheit.");
+                            console.log("Humidity is currently " + weather.main.humidity + ".");
+                            console.log("Wind is currently blowing " + weather.wind.speed + "mph from the direction of " + weather.wind.deg + ".");
+                            console.log("Currently the cloud coverage is " + weather.clouds.all + "%.");
+
+                            var weatherConditions = weather.weather;
+                            var str = "";
+
+                            // Used to find out and display all of the weather conditions in the weather.weather array that we get back from the request response
+                            for (var x = 0; x < weatherConditions.length; x++) {
+                                if (x === weatherConditions.length - 1) {
+                                    str += weatherConditions[x].main + "(" + weatherConditions[x].description + ")";
+                                }
+                                else {
+                                    str += weatherConditions[x].main + "(" + weatherConditions[x].description + ")" + ', ';
+                                }
+                            }
+                            console.log("Current weather condition(s):  " + str);
+
+                        } else if (response.statusCode === 404) {
+                            console.log("Error detected! See below for error message returned.");
+                            console.log("Error Code " + weather.cod + ": " + weather.message);
+                        }
+                    });
+
+                })
+
+        }
+        else if (response.searchType === "Zip Code") {
+
+            inquirer.prompt([
+                {
+                    type: "input",
+                    name: "userZipCode",
+                    message: "Enter the zip code:  "
+                }]).then(function (zipCodeResponse) {
+                    var userZipCode = zipCodeResponse.userZipCode;
+
+                    // Then run a request to the OpenWeatherMap API with the location specified
+                    var queryUrl = "https://api.openweathermap.org/data/2.5/weather?zip=" + userZipCode + "&units=imperial" + "&APPID=" + keys.openweathermap.APPID;
+
+                    request(queryUrl, function (error, response, body) {
+
+                        // JSON'ing the body response and storing into weather, making it in a more readable format to easily discern name of attributes
+                        var weather = JSON.parse(body);
+
+                        // If there were no errors and the response code was 200 (i.e. the request was successful)...
+                        if (!error && response.statusCode === 200) {
+                            console.log("\nDisplaying weather for requested Zip Code (" + userZipCode + ").");
+                            console.log("Weather currently in " + weather.name + ":");
+                            console.log("It's " + weather.main.temp + " degrees Fahrenheit.");
+                            console.log("Humidity is currently " + weather.main.humidity + ".");
+                            console.log("Wind is currently blowing " + weather.wind.speed + "mph from the direction of " + weather.wind.deg + ".");
+                            console.log("Currently the cloud coverage is " + weather.clouds.all + "%.");
+
+                            var weatherConditions = weather.weather;
+                            var str = "";
+
+                            // Used to find out and display all of the weather conditions in the weather.weather array that we get back from the request response
+                            for (var x = 0; x < weatherConditions.length; x++) {
+                                if (x === weatherConditions.length - 1) {
+                                    str += weatherConditions[x].main + "(" + weatherConditions[x].description + ")";
+                                }
+                                else {
+                                    str += weatherConditions[x].main + "(" + weatherConditions[x].description + ")" + ', ';
+                                }
+                            }
+                            console.log("Current weather condition(s):  " + str);
+
+                        } else if (response.statusCode === 404) {
+                            console.log("Error detected! See below for error message returned.");
+                            console.log("Error Code " + weather.cod + ": " + weather.message);
+                        }
+                    });
+
+                })
+
+        }
+    });
+
+}
+
 function doWhatItSays() {
     console.log("================================");
     console.log("Calling Do-What-It-Says Function");
@@ -241,14 +333,8 @@ function doWhatItSays() {
             return console.log(error);
         }
 
-        // We will then print the contents of data
-        console.log(data);
-
         // Then split it by commas (to make it more readable)
         var dataArr = data.split(",");
-
-        // We will then re-display the content as an array for later use.
-        console.log(dataArr);
 
         var doItNow = dataArr[0];
         var query = dataArr[1].split(" ");
@@ -269,8 +355,4 @@ function doWhatItSays() {
         }
 
     });
-}
-
-function weatherThis(inputString) {
-    console.log("Weather This");
 }
